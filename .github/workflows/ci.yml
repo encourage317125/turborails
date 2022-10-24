@@ -1,0 +1,44 @@
+name: CI
+on: [push, pull_request]
+jobs:
+  tests:
+    strategy:
+      matrix:
+        ruby-version:
+          - "2.7"
+          - "3.0"
+        rails-version:
+          - "6.1"
+          - "7.0"
+          - "main"
+
+        # Disabled until minitest relaxes its upper bound: https://github.com/seattlerb/minitest/pull/862
+        # > minitest-5.14.2 requires ruby version < 3.1, >= 2.2, which is incompatible with the current version, ruby 3.1.0p-1
+        #
+        # include:
+        #   - ruby-version: head
+        #     continue-on-error: true
+
+    env:
+      RAILS_VERSION: "${{ matrix.rails-version }}"
+
+    name: ${{ format('Tests (Ruby {0}, Rails {1})', matrix.ruby-version, matrix.rails-version) }}
+    runs-on: ubuntu-latest
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@v1
+
+      - name: Install Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ matrix.ruby-version }}
+          bundler-cache: true
+
+      - name: Run tests
+        run: |
+          bin/test test/**/*_test.rb
+      - name: Fail when generated changes are not checked-in
+        run: |
+          git update-index --refresh
+          git diff-index --quiet HEAD --
